@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DOCX → CMS HTML Converter</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    :root {
+      --bg: #f0f2f7;
+      --surface: #ffffff;
+      --surface2: #f7f8fb;
+      --text: #16253d;
+      --muted: #6b7a96;
+      --line: #dde2ec;
+      --accent: #1a2f5a;
+      --accent-light: #e8edf7;
+      --ok: #0f6e45;
+      --ok-bg: #e6f5ee;
+      --err: #b82828;
+      --err-bg: #fdeaea;
+      --warn: #8a5f00;
+      --warn-bg: #fff8e6;
+      --queue-h: 340px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+      padding: 32px 20px;
+    }
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .header {
+      margin-bottom: 28px;
+    }
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .header p {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* Drop zone */
+    .dropzone {
+      background: var(--surface);
+      border: 2px dashed var(--line);
+      border-radius: 18px;
+      padding: 40px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.18s, background 0.18s;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .dropzone.dragover {
+      border-color: #3b6fd4;
+      background: #f0f5ff;
+    }
+    .dropzone-icon {
+      font-size: 42px;
+      margin-bottom: 14px;
+      display: block;
+      user-select: none;
+    }
+    .dropzone h2 {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .dropzone p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+    .browse-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 22px;
+      border-radius: 10px;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s;
+    }
+    .browse-btn:hover { background: #253f7a; }
+    #fileInput { display: none; }
+
+    /* Action bar */
+    .action-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:not(:disabled):hover { background: #253f7a; }
+    .btn-ghost {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+    .btn-ghost:not(:disabled):hover { background: var(--surface2); }
+    .btn-danger {
+      background: var(--err-bg);
+      color: var(--err);
+      border: 1px solid #f0c0c0;
+    }
+    .btn-danger:not(:disabled):hover { background: #fbd4d4; }
+    .queue-summary {
+      font-size: 13px;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    /* Queue */
+    .queue-wrap {
+      background: var(--surface);
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .queue-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface2);
+    }
+    .queue-header h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .queue-list {
+      max-height: var(--queue-h);
+      overflow-y: auto;
+    }
+    .queue-list::-webkit-scrollbar { width: 6px; }
+    .queue-list::-webkit-scrollbar-track { background: transparent; }
+    .queue-list::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+    .queue-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 20px;
+      color: var(--muted);
+      font-size: 14px;
+      gap: 8px;
+    }
+    .queue-empty-icon { font-size: 32px; }
+
+    .file-row {
+      display: grid;
+      grid-template-columns: 36px 1fr auto auto;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--line);
+      transition: background 0.12s;
+    }
+    .file-row:last-child { border-bottom: none; }
+    .file-row:hover { background: var(--surface2); }
+    .file-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      background: var(--accent-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .file-info { min-width: 0; }
+    .file-name {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text);
+    }
+    .file-size {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .file-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .status-idle { background: var(--surface2); color: var(--muted); border: 1px solid var(--line); }
+    .status-running {
+      background: var(--accent-light);
+      color: var(--accent);
+      border: 1px solid #b8c8e8;
+      animation: pulse-status 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse-status {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .status-done { background: var(--ok-bg); color: var(--ok); border: 1px solid #a8dcc0; }
+    .status-error { background: var(--err-bg); color: var(--err); border: 1px solid #f0c0c0; }
+
+    .row-actions { display: flex; gap: 6px; }
+    .icon-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      transition: background 0.12s;
+      flex-shrink: 0;
+    }
+    .icon-btn:hover { background: var(--surface2); }
+    .icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* Output panel */
+    .output-panel {
+      background: var(--surface);
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+    .output-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface2);
+      overflow-x: auto;
+      padding: 0 18px;
+    }
+    .output-tab {
+      padding: 11px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.12s, border-color 0.12s;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .output-tab:hover { color: var(--text); }
+    .output-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+    .output-tab .tab-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--ok);
+      display: none;
+    }
+    .output-tab.has-output .tab-dot { display: block; }
+    .output-tab.has-error .tab-dot { background: var(--err); display: block; }
+
+    .output-toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--line);
+      flex-wrap: wrap;
+    }
+    .output-filename {
+      font-size: 13px;
+      color: var(--muted);
+      margin-left: 4px;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #outputArea {
+      display: block;
+      width: 100%;
+      min-height: 420px;
+      resize: vertical;
+      border: none;
+      outline: none;
+      padding: 18px;
+      font-family: "Consolas", "Monaco", monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #2d3a50;
+      background: #fff;
+      white-space: pre;
+    }
+    .output-placeholder {
+      padding: 64px 32px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .output-placeholder-icon { font-size: 36px; margin-bottom: 12px; display: block; }
+
+    /* Progress bar */
+    .progress-bar-wrap {
+      height: 3px;
+      background: var(--line);
+      border-radius: 2px;
+      overflow: hidden;
+      margin: 0 18px 14px;
+      display: none;
+    }
+    .progress-bar-wrap.visible { display: block; }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.3s ease;
+      border-radius: 2px;
+    }
+
+    .global-status {
+      padding: 0 0 14px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      display: none;
+    }
+    .global-status.ok { color: var(--ok); display: block; }
+    .global-status.err { color: var(--err); display: block; }
+    .global-status.running { color: var(--accent); display: block; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <h1>DOCX → CMS HTML Converter</h1>
+    <p>Drag and drop multiple DOCX price trend reports. Each file converts to clean CMS-ready HTML with h2/h3/h4 headings, paragraphs, lists, and tables.</p>
+  </div>
+
+  <!-- Drop Zone -->
+  <div class="dropzone" id="dropzone">
+    <span class="dropzone-icon">📄</span>
+    <h2>Drop DOCX files here</h2>
+    <p>Supports multiple files at once — all converted in order</p>
+    <label class="browse-btn" for="fileInput">Browse files</label>
+    <input type="file" id="fileInput" multiple accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+  </div>
+
+  <!-- Action bar -->
+  <div class="action-bar">
+    <button class="btn btn-primary" id="convertAllBtn" disabled>Convert All</button>
+    <button class="btn btn-ghost" id="downloadAllBtn" disabled>Download All</button>
+    <button class="btn btn-danger" id="clearAllBtn" disabled>Clear Queue</button>
+    <span class="queue-summary" id="queueSummary"></span>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-bar-wrap" id="progressWrap">
+    <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+  </div>
+  <div class="global-status" id="globalStatus"></div>
+
+  <!-- File Queue -->
+  <div class="queue-wrap">
+    <div class="queue-header">
+      <h3>File Queue</h3>
+    </div>
+    <div class="queue-list" id="queueList">
+      <div class="queue-empty">
+        <span class="queue-empty-icon">🗂️</span>
+        <span>No files added yet</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Output Panel -->
+  <div class="output-panel" id="outputPanel">
+    <div class="output-tabs" id="outputTabs"></div>
+    <div id="outputContent">
+      <div class="output-placeholder">
+        <span class="output-placeholder-icon">✨</span>
+        <div>Converted HTML will appear here</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+const R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+
+const CONFIG = {
+  startFromHeadingTexts: ["Key Takeaways", "Market Overview"],
+  removeSourceLines: true,
+  forceAllListsToUl: true,
+  blankLineBetweenBlocks: true,
+  convertBlockquotes: true,
+  headingLevelMap: {
+    "Heading1": "h3", "heading1": "h3",
+    "Heading2": "h3", "heading2": "h3",
+    "Heading3": "bold-p", "heading3": "bold-p",
+    "Heading4": "h4", "heading4": "h4",
+  },
+  legacyHeadingTag: "h3"
+};
+
+/* ── State ── */
+let queue = [];       // { id, file, status, html, error }
+let activeTabId = null;
+let isConverting = false;
+let idCounter = 0;
+
+/* ── DOM refs ── */
+const dropzone       = document.getElementById("dropzone");
+const fileInput      = document.getElementById("fileInput");
+const convertAllBtn  = document.getElementById("convertAllBtn");
+const downloadAllBtn = document.getElementById("downloadAllBtn");
+const clearAllBtn    = document.getElementById("clearAllBtn");
+const queueList      = document.getElementById("queueList");
+const queueSummary   = document.getElementById("queueSummary");
+const outputTabs     = document.getElementById("outputTabs");
+const outputContent  = document.getElementById("outputContent");
+const progressWrap   = document.getElementById("progressWrap");
+const progressFill   = document.getElementById("progressFill");
+const globalStatus   = document.getElementById("globalStatus");
+
+/* ── Drag & Drop ── */
+["dragenter","dragover"].forEach(evt => {
+  dropzone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dropzone.classList.add("dragover"); });
+  document.body.addEventListener(evt, e => e.preventDefault());
+});
+["dragleave","drop"].forEach(evt => {
+  dropzone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dropzone.classList.remove("dragover"); });
+});
+dropzone.addEventListener("drop", e => {
+  e.preventDefault();
+  const files = Array.from(e.dataTransfer?.files || []).filter(f => /\.docx$/i.test(f.name));
+  if (!files.length) return showGlobalStatus("Only .docx files are accepted.", "err");
+  addFiles(files);
+});
+fileInput.addEventListener("change", () => {
+  const files = Array.from(fileInput.files).filter(f => /\.docx$/i.test(f.name));
+  addFiles(files);
+  fileInput.value = "";
+});
+
+/* ── File Management ── */
+function addFiles(files) {
+  const dupes = [];
+  files.forEach(f => {
+    if (queue.find(q => q.file.name === f.name)) { dupes.push(f.name); return; }
+    queue.push({ id: ++idCounter, file: f, status: "idle", html: null, error: null });
+  });
+  if (dupes.length) showGlobalStatus(`Skipped (already in queue): ${dupes.join(", ")}`, "err");
+  renderQueue();
+  updateActionBar();
+}
+
+function removeFile(id) {
+  queue = queue.filter(q => q.id !== id);
+  if (activeTabId === id) {
+    activeTabId = queue.find(q => q.html)?.id || null;
+  }
+  renderQueue();
+  renderTabs();
+  updateActionBar();
+}
+
+/* ── Render Queue ── */
+function renderQueue() {
+  if (!queue.length) {
+    queueList.innerHTML = `<div class="queue-empty"><span class="queue-empty-icon">🗂️</span><span>No files added yet</span></div>`;
+    return;
+  }
+  queueList.innerHTML = queue.map(item => `
+    <div class="file-row" id="row-${item.id}">
+      <div class="file-icon">📄</div>
+      <div class="file-info">
+        <div class="file-name" title="${esc(item.file.name)}">${esc(item.file.name)}</div>
+        <div class="file-size">${formatBytes(item.file.size)}</div>
+      </div>
+      <div>
+        ${statusBadge(item)}
+      </div>
+      <div class="row-actions">
+        ${item.html ? `<button class="icon-btn" title="View output" onclick="viewFile(${item.id})">👁️</button>` : ""}
+        ${item.html ? `<button class="icon-btn" title="Download HTML" onclick="downloadFile(${item.id})">⬇️</button>` : ""}
+        <button class="icon-btn" title="Remove" onclick="removeFile(${item.id})" ${isConverting ? "disabled" : ""}>✕</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function statusBadge(item) {
+  const map = {
+    idle:    `<span class="file-status status-idle">Pending</span>`,
+    running: `<span class="file-status status-running">⚙ Converting…</span>`,
+    done:    `<span class="file-status status-done">✓ Done</span>`,
+    error:   `<span class="file-status status-error" title="${esc(item.error || "")}">✕ Error</span>`,
+  };
+  return map[item.status] || map.idle;
+}
+
+/* ── Tabs ── */
+function renderTabs() {
+  const withOutput = queue.filter(q => q.html || q.error);
+  if (!withOutput.length) {
+    outputContent.innerHTML = `<div class="output-placeholder"><span class="output-placeholder-icon">✨</span><div>Converted HTML will appear here</div></div>`;
+    outputTabs.innerHTML = "";
+    return;
+  }
+  outputTabs.innerHTML = withOutput.map(item => {
+    const cls = ["output-tab", item.id === activeTabId ? "active" : "", item.html ? "has-output" : "has-error"].filter(Boolean).join(" ");
+    const label = item.file.name.replace(/\.docx$/i, "");
+    return `<div class="${cls}" onclick="switchTab(${item.id})"><span class="tab-dot"></span>${esc(label)}</div>`;
+  }).join("");
+
+  const active = queue.find(q => q.id === activeTabId) || withOutput[0];
+  if (active) showActiveOutput(active);
+}
+
+function switchTab(id) {
+  activeTabId = id;
+  renderTabs();
+}
+
+function viewFile(id) {
+  activeTabId = id;
+  renderTabs();
+  document.getElementById("outputPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function showActiveOutput(item) {
+  if (item.html) {
+    outputContent.innerHTML = `
+      <div class="output-toolbar">
+        <button class="btn btn-ghost" style="padding:7px 14px;font-size:13px" onclick="copyActive()">Copy HTML</button>
+        <button class="btn btn-ghost" style="padding:7px 14px;font-size:13px" onclick="downloadFile(${item.id})">Download</button>
+        <span class="output-filename">${esc(item.file.name.replace(/\.docx$/i, ".html"))}</span>
+      </div>
+      <textarea id="outputArea" spellcheck="false">${esc(item.html)}</textarea>
+    `;
+  } else if (item.error) {
+    outputContent.innerHTML = `<div class="output-placeholder" style="color:var(--err)"><span class="output-placeholder-icon">⚠️</span><div>${esc(item.error)}</div></div>`;
+  }
+}
+
+/* ── Action Bar ── */
+function updateActionBar() {
+  const total = queue.length;
+  const done  = queue.filter(q => q.status === "done").length;
+  const idle  = queue.filter(q => q.status === "idle").length;
+  convertAllBtn.disabled  = !idle || isConverting;
+  downloadAllBtn.disabled = !done || isConverting;
+  clearAllBtn.disabled    = !total || isConverting;
+  queueSummary.textContent = total ? `${done} / ${total} converted` : "";
+}
+
+/* ── Conversion ── */
+async function convertAll() {
+  const pending = queue.filter(q => q.status === "idle");
+  if (!pending.length || isConverting) return;
+  if (!window.JSZip) return showGlobalStatus("JSZip not loaded. Check internet connection.", "err");
+
+  isConverting = true;
+  updateActionBar();
+  progressWrap.classList.add("visible");
+  showGlobalStatus("Converting…", "running");
+
+  const total = pending.length;
+  let done = 0;
+
+  for (const item of pending) {
+    item.status = "running";
+    renderQueue();
+    try {
+      item.html = await convertDocx(item.file);
+      item.status = "done";
+    } catch(e) {
+      item.status = "error";
+      item.error = e.message || String(e);
+    }
+    done++;
+    progressFill.style.width = (done / total * 100) + "%";
+    if (!activeTabId && item.html) activeTabId = item.id;
+    renderQueue();
+    renderTabs();
+  }
+
+  isConverting = false;
+  updateActionBar();
+
+  const errors = queue.filter(q => q.status === "error").length;
+  const ok     = queue.filter(q => q.status === "done").length;
+  if (errors) showGlobalStatus(`${ok} converted, ${errors} failed.`, "err");
+  else showGlobalStatus(`All ${ok} files converted successfully.`, "ok");
+
+  setTimeout(() => {
+    progressWrap.classList.remove("visible");
+    progressFill.style.width = "0%";
+  }, 1200);
+}
+
+convertAllBtn.addEventListener("click", convertAll);
+
+clearAllBtn.addEventListener("click", () => {
+  if (isConverting) return;
+  queue = [];
+  activeTabId = null;
+  renderQueue();
+  renderTabs();
+  updateActionBar();
+  showGlobalStatus("", "");
+});
+
+downloadAllBtn.addEventListener("click", () => {
+  queue.filter(q => q.html).forEach(q => triggerDownload(q));
+});
+
+function downloadFile(id) {
+  const item = queue.find(q => q.id === id);
+  if (item?.html) triggerDownload(item);
+}
+
+function triggerDownload(item) {
+  const name = item.file.name.replace(/\.docx$/i, ".html");
+  const blob = new Blob([item.html], { type: "text/html;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  URL.revokeObjectURL(a.href);
+  a.remove();
+}
+
+async function copyActive() {
+  const el = document.getElementById("outputArea");
+  if (!el) return;
+  try {
+    await navigator.clipboard.writeText(el.value);
+    showGlobalStatus("Copied to clipboard.", "ok");
+    setTimeout(() => showGlobalStatus("", ""), 2000);
+  } catch {
+    showGlobalStatus("Copy failed — select all and copy manually.", "err");
+  }
+}
+
+/* ── Helpers ── */
+function formatBytes(b) {
+  if (b < 1024) return b + " B";
+  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
+  return (b / 1024 / 1024).toFixed(2) + " MB";
+}
+
+function showGlobalStatus(msg, kind) {
+  globalStatus.className = "global-status" + (kind ? " " + kind : "");
+  globalStatus.textContent = msg;
+}
+
+function esc(t) {
+  return String(t ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/'/g, "&#39;");
+}
+
+/* ════════════════════════════
+   DOCX Conversion Core (all settings unchanged from v1)
+   ════════════════════════════ */
+
+function localName(node) {
+  return node ? (node.localName || (node.nodeName || "").split(":").pop()) : "";
+}
+function childrenByName(node, name) {
+  return Array.from(node.childNodes || []).filter(n => n.nodeType === 1 && localName(n) === name);
+}
+function firstChildByName(node, name) {
+  return childrenByName(node, name)[0] || null;
+}
+function wAttr(node, name, ns) {
+  if (!node) return null;
+  ns = ns || W_NS;
+  return node.getAttributeNS(ns, name) || node.getAttribute("w:" + name) || node.getAttribute("r:" + name) || node.getAttribute(name);
+}
+function escHtml(text) {
+  return String(text ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/'/g, "&#39;")
+    .replace(/\u2191/g, "&uarr;").replace(/\u2193/g, "&darr;");
+}
+function normalizeText(text) {
+  return String(text || "").replace(/\u00A0/g, " ").replace(/[ \t\r\n]+/g, " ").trim();
+}
+function paragraphText(p) { return normalizeText(extractTextFromNode(p)); }
+function extractTextFromNode(node) {
+  if (!node) return "";
+  let out = "";
+  const walker = node.ownerDocument.createTreeWalker(node, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+  let cur = walker.currentNode;
+  while (cur) {
+    if (cur.nodeType === 3) out += cur.nodeValue || "";
+    else if (cur.nodeType === 1) {
+      const ln = localName(cur);
+      if (ln === "tab") out += "\t";
+      if (ln === "br" || ln === "cr") out += "\n";
+    }
+    cur = walker.nextNode();
+  }
+  return out;
+}
+
+function buildRelationshipMap(relsXml) {
+  const map = {};
+  if (!relsXml) return map;
+  const doc = new DOMParser().parseFromString(relsXml, "application/xml");
+  for (const rel of Array.from(doc.getElementsByTagName("Relationship"))) {
+    const id = rel.getAttribute("Id"), target = rel.getAttribute("Target");
+    if (id && target) map[id] = target;
+  }
+  return map;
+}
+
+function buildStyleMap(stylesXml) {
+  const map = {};
+  if (!stylesXml) return map;
+  const doc = new DOMParser().parseFromString(stylesXml, "application/xml");
+  for (const style of Array.from(doc.getElementsByTagNameNS(W_NS, "style"))) {
+    const styleId = wAttr(style, "styleId");
+    if (!styleId) continue;
+    const nameNode = firstChildByName(style, "name");
+    const basedOn  = firstChildByName(style, "basedOn");
+    const pPr = firstChildByName(style, "pPr");
+    const rPr = firstChildByName(style, "rPr");
+    map[styleId] = {
+      name: nameNode ? wAttr(nameNode, "val") : "",
+      basedOn: basedOn ? wAttr(basedOn, "val") : null,
+      type: wAttr(style, "type") || "",
+      hasNumPr: !!(pPr && firstChildByName(pPr, "numPr")),
+      bold: !!(rPr && firstChildByName(rPr, "b")),
+      size: getSizeFromRPr(rPr)
+    };
+  }
+  return map;
+}
+
+function resolveStyle(styleId, styleMap, prop) {
+  let current = styleId;
+  const seen = new Set();
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    const item = styleMap[current];
+    if (!item) break;
+    if (item[prop] !== null && item[prop] !== undefined && item[prop] !== "") return item[prop];
+    current = item.basedOn;
+  }
+  return null;
+}
+
+function getParagraphStyleId(p) {
+  const pPr = firstChildByName(p, "pPr");
+  const pStyle = pPr ? firstChildByName(pPr, "pStyle") : null;
+  return pStyle ? wAttr(pStyle, "val") : null;
+}
+function getRunStyleId(r) {
+  const rPr = firstChildByName(r, "rPr");
+  const rStyle = rPr ? firstChildByName(rPr, "rStyle") : null;
+  return rStyle ? wAttr(rStyle, "val") : null;
+}
+function getSizeFromRPr(rPr) {
+  const sz = rPr ? firstChildByName(rPr, "sz") : null;
+  if (!sz) return null;
+  const n = parseInt(wAttr(sz, "val"), 10);
+  return Number.isFinite(n) ? n : null;
+}
+function getRunDirectSize(r) { return getSizeFromRPr(firstChildByName(r, "rPr")); }
+
+function isRunBold(r, pStyleId, styleMap) {
+  const rPr = firstChildByName(r, "rPr");
+  const b = rPr ? firstChildByName(rPr, "b") : null;
+  if (b) { const v = wAttr(b, "val"); if (v === "0" || v === "false") return false; return true; }
+  const runStyle = getRunStyleId(r);
+  const fromRun = runStyle ? resolveStyle(runStyle, styleMap, "bold") : null;
+  if (fromRun !== null) return !!fromRun;
+  const fromPara = pStyleId ? resolveStyle(pStyleId, styleMap, "bold") : null;
+  if (fromPara !== null) return !!fromPara;
+  return false;
+}
+
+function effectiveRunSize(r, pStyleId, styleMap) {
+  const direct = getRunDirectSize(r);
+  if (direct) return direct;
+  const runStyle = getRunStyleId(r);
+  const runSize = runStyle ? resolveStyle(runStyle, styleMap, "size") : null;
+  if (runSize) return runSize;
+  return (pStyleId ? resolveStyle(pStyleId, styleMap, "size") : null) || 24;
+}
+
+function paragraphRunSizes(p, styleMap) {
+  const pStyleId = getParagraphStyleId(p);
+  return childrenByName(p, "r")
+    .filter(r => normalizeText(extractTextFromNode(r)))
+    .map(r => effectiveRunSize(r, pStyleId, styleMap));
+}
+
+function paragraphHasNumPr(p, styleMap) {
+  const pPr = firstChildByName(p, "pPr");
+  if (pPr && firstChildByName(pPr, "numPr")) return true;
+  const styleId = getParagraphStyleId(p);
+  return styleId ? !!resolveStyle(styleId, styleMap, "hasNumPr") : false;
+}
+
+function paragraphListLevel(p) {
+  const pPr = firstChildByName(p, "pPr");
+  const numPr = pPr ? firstChildByName(pPr, "numPr") : null;
+  const ilvl = numPr ? firstChildByName(numPr, "ilvl") : null;
+  if (!ilvl) return 0;
+  const n = parseInt(wAttr(ilvl, "val"), 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function getHeadingTag(p, nonEmptyIndex, styleMap) {
+  const text = paragraphText(p);
+  if (!text) return null;
+  const styleId = getParagraphStyleId(p);
+  const styleName = styleId ? String(resolveStyle(styleId, styleMap, "name") || styleId) : "";
+  if (styleId && CONFIG.headingLevelMap[styleId]) return CONFIG.headingLevelMap[styleId];
+  if (/^heading\s*1$/i.test(styleName)) return "h2";
+  if (/^heading\s*2$/i.test(styleName)) return "h3";
+  if (/^heading\s*3$/i.test(styleName)) return "bold-p";
+  if (/^heading\s*4$/i.test(styleName)) return "h4";
+  if (/^heading\s*\d+$/i.test(styleName) || /^Heading\d+$/i.test(styleId || "")) return CONFIG.legacyHeadingTag;
+  if (nonEmptyIndex >= 2) {
+    const sizes = paragraphRunSizes(p, styleMap);
+    if (sizes.length && sizes.every(sz => sz >= 28)) return CONFIG.legacyHeadingTag;
+  }
+  if (/^(Key Takeaways|Market Overview|What Is |Which Sectors |Global .* Price Trend|.* Price Trends? in \d{4}|What Factors |.* Market Forecast|Expected .* Price Range|Key Analyst Insights|Key Takeaways for Buyers|Frequently Asked Questions|FAQs?|How We Can Help|.*: Your Source for .* Price Intelligence|.* Price Forecast for \d{4}|For the Quarter Ending |Quarterly .* Price Trends?|What was .* Price in \d{4}\?|.* Prices? in .* in \d{4})$/i.test(text)) {
+    return CONFIG.legacyHeadingTag;
+  }
+  return null;
+}
+
+function isHeadingParagraph(p, nonEmptyIndex, styleMap) {
+  return !!getHeadingTag(p, nonEmptyIndex, styleMap);
+}
+
+function isBlockquoteParagraph(p, styleMap) {
+  if (!CONFIG.convertBlockquotes) return false;
+  const styleId = getParagraphStyleId(p);
+  const styleName = styleId ? String(resolveStyle(styleId, styleMap, "name") || styleId) : "";
+  return /quote|blockquote|intense quote/i.test(styleName);
+}
+
+function isSourceLine(text) { return /^Sources?:\s*/i.test(text); }
+function isCommentLine(text) { return /^Comment by\s+/i.test(text); }
+function isStatsLine(text) {
+  return /^(=+\s*START stats\s*=+|=+\s*END stats\s*=+|Historical Price:|Forecast Price:|CAGR:|Currency:|Unit:|AI\s*[–-]?\s*\d)/i.test(text);
+}
+function shouldSkipParagraph(text) {
+  if (!text || /^\s*$/.test(text)) return true;
+  if (isCommentLine(text) || isStatsLine(text)) return true;
+  if (CONFIG.removeSourceLines && isSourceLine(text)) return true;
+  return false;
+}
+
+function stripLeadingListMarker(html) {
+  return html.replace(/^\s*(?:\d+\.|[a-zA-Z]\.|[ivxlcdm]+\.|[·•\-])\s*/i, "").trim();
+}
+function applyLeadingStrongPattern(html) {
+  if (/^<strong>[^<]+:<\/strong>/i.test(html))
+    return html.replace(/^<strong>([^<]+:)<\/strong>\s*/i, "<strong>$1&nbsp;</strong>");
+  return html.replace(/^([^:<]{2,90}:)\s+/i, "<strong>$1&nbsp;</strong>");
+}
+
+function buildInlineHtmlFromParagraph(p, styleMap, relMap, options) {
+  options = options || {};
+  const pStyleId = getParagraphStyleId(p);
+  let html = "";
+  for (const child of Array.from(p.childNodes || []).filter(n => n.nodeType === 1)) {
+    const ln = localName(child);
+    if (ln === "r") {
+      html += buildInlineHtmlFromRun(child, pStyleId, styleMap, options);
+    } else if (ln === "hyperlink") {
+      const rid = wAttr(child, "id", R_NS) || child.getAttribute("r:id");
+      const href = rid && relMap[rid] ? relMap[rid] : "";
+      let linkText = "";
+      for (const r of childrenByName(child, "r")) linkText += buildInlineHtmlFromRun(r, pStyleId, styleMap, options);
+      html += href ? `<a href="${escHtml(href)}">${linkText}</a>` : linkText;
+    }
+  }
+  html = html.replace(/[ \t\r\n]+/g, " ").trim();
+  if (options.stripListMarker) html = stripLeadingListMarker(html);
+  if (options.strongLeadingLabel) html = applyLeadingStrongPattern(html);
+  return html;
+}
+
+function buildInlineHtmlFromRun(r, pStyleId, styleMap, options) {
+  options = options || {};
+  let text = "";
+  for (const child of Array.from(r.childNodes || []).filter(n => n.nodeType === 1 || n.nodeType === 3)) {
+    if (child.nodeType === 3) { text += child.nodeValue || ""; continue; }
+    const ln = localName(child);
+    if (ln === "t") text += child.textContent || "";
+    else if (ln === "tab") text += "\t";
+    else if (ln === "br" || ln === "cr") text += "\n";
+  }
+  if (!text) return "";
+  let html = escHtml(text).replace(/\s*\n\s*/g, " ");
+  if (!options.asHeading && isRunBold(r, pStyleId, styleMap)) html = `<strong>${html}</strong>`;
+  return html;
+}
+
+function isListParagraph(p, text, styleMap) {
+  if (/^\s*(?:\d+\.|[a-zA-Z]\.|[·•\-])\s+/.test(text)) return true;
+  if (paragraphHasNumPr(p, styleMap)) return true;
+  const styleId = getParagraphStyleId(p);
+  const styleName = styleId ? String(resolveStyle(styleId, styleMap, "name") || styleId) : "";
+  if (/^ListParagraph$/i.test(styleId) || /^list paragraph$/i.test(styleName)) return true;
+  return false;
+}
+
+function convertParagraph(p, nonEmptyIndex, styleMap, relMap) {
+  const text = paragraphText(p);
+  if (shouldSkipParagraph(text)) return null;
+  const headingTag = getHeadingTag(p, nonEmptyIndex, styleMap);
+  if (headingTag) {
+    const inline = buildInlineHtmlFromParagraph(p, styleMap, relMap, { asHeading: true });
+    if (!inline) return null;
+    if (headingTag === "bold-p") return { type: "p", html: `<p><strong>${inline}</strong></p>`, text };
+    return { type: "heading", html: `<${headingTag}>${inline}</${headingTag}>`, text };
+  }
+  if (isListParagraph(p, text, styleMap)) {
+    const inline = buildInlineHtmlFromParagraph(p, styleMap, relMap, { stripListMarker: true, strongLeadingLabel: true });
+    return inline ? { type: "li", level: paragraphListLevel(p), html: `<li>${inline}</li>`, text } : null;
+  }
+  let inline = buildInlineHtmlFromParagraph(p, styleMap, relMap, {});
+  if (!inline) return null;
+  if (isBlockquoteParagraph(p, styleMap))
+    return { type: "blockquote", html: `<blockquote>\n\t<p>${inline}</p>\n</blockquote>`, text };
+  inline = inline.replace(/^(<strong>[^<]*<\/strong>|[^:<]{1,60}?)(\s*:)(\s*)(?=\S)/, (_, label, colon, space) => {
+    const stripped = label.replace(/<\/?strong>/gi, "");
+    return `<strong>${stripped}${colon}<\/strong>${space}`;
+  });
+  return { type: "p", html: `<p>${inline}</p>`, text };
+}
+
+function formatCellInner(inlineHtml, isHeaderLike) {
+  const clean = inlineHtml.trim();
+  if (!clean) return "";
+  if (isHeaderLike && !/^<strong>/i.test(clean)) return `<strong>${clean}</strong>`;
+  return clean;
+}
+function cellInlineHtml(tc, styleMap, relMap) {
+  const pieces = [];
+  for (const p of childrenByName(tc, "p")) {
+    const text = paragraphText(p);
+    if (shouldSkipParagraph(text)) continue;
+    const inline = buildInlineHtmlFromParagraph(p, styleMap, relMap, {});
+    if (inline) pieces.push(inline);
+  }
+  return pieces.join(" ").replace(/\s+/g, " ").trim();
+}
+function isHeaderRow(cellsText, rowIndex) {
+  if (rowIndex !== 0 || !cellsText.length) return false;
+  return /(Quarter|Price|QoQ|Direction|Region|Report Features|Coverage|Product Name|Currency|Customization|Data Access|Delivery Format|Period|Change|Market|Value|Unit|Date)/i.test(cellsText.join(" "));
+}
+function convertTable(tbl, styleMap, relMap) {
+  const rows = childrenByName(tbl, "tr");
+  const out = ["<table>", "\t<tbody>"];
+  for (let ri = 0; ri < rows.length; ri++) {
+    const rawCells = childrenByName(rows[ri], "tc");
+    const cells = rawCells.map(tc => {
+      const html = cellInlineHtml(tc, styleMap, relMap);
+      const text = normalizeText(html.replace(/<[^>]*>/g, ""));
+      const tcPr = firstChildByName(tc, "tcPr");
+      const vMerge = tcPr ? firstChildByName(tcPr, "vMerge") : null;
+      const gridSpan = tcPr ? firstChildByName(tcPr, "gridSpan") : null;
+      return {
+        html, text,
+        rowspanContinue: vMerge && wAttr(vMerge, "val") === "continue",
+        colspan: gridSpan ? parseInt(wAttr(gridSpan, "val"), 10) : null
+      };
+    }).filter(c => !c.rowspanContinue && c.html);
+    if (!cells.length) continue;
+    const headerLike = isHeaderRow(cells.map(c => c.text), ri);
+    out.push("\t\t<tr>");
+    for (const cell of cells) {
+      const a = cell.colspan && cell.colspan > 1 ? ` colspan="${cell.colspan}"` : "";
+      out.push(`\t\t\t<td${a}>${formatCellInner(cell.html, headerLike)}</td>`);
+    }
+    out.push("\t\t</tr>");
+  }
+  out.push("\t</tbody>", "</table>");
+  return out.join("\n");
+}
+
+function shouldStartOutput(text) {
+  const n = normalizeText(text).toLowerCase();
+  return CONFIG.startFromHeadingTexts.some(h => n === h.toLowerCase());
+}
+function cleanFinalOutput(html) {
+  return html
+    .replace(/<p>\s*(?:&nbsp;|\s)*<\/p>/gi, "")
+    .replace(/\s+<\/li>/g, "</li>")
+    .replace(/\s+<\/p>/g, "</p>")
+    .replace(/<strong>\s*<\/strong>/g, "")
+    .replace(/<strong>([^<]+:)\s*<\/strong>\s*/g, "<strong>$1&nbsp;</strong>")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+async function convertDocx(file) {
+  const zip = await JSZip.loadAsync(file);
+  const documentXml = await zip.file("word/document.xml")?.async("string");
+  if (!documentXml) throw new Error("Could not read word/document.xml");
+  const stylesXml = await zip.file("word/styles.xml")?.async("string");
+  const relsXml   = await zip.file("word/_rels/document.xml.rels")?.async("string");
+  const styleMap  = buildStyleMap(stylesXml);
+  const relMap    = buildRelationshipMap(relsXml);
+  const doc  = new DOMParser().parseFromString(documentXml, "application/xml");
+  const body = firstChildByName(doc.documentElement, "body");
+  if (!body) throw new Error("Could not find the document body.");
+
+  const blocks = [], listStack = [];
+  let nonEmptyIndex = 0, started = false;
+
+  const addBlock = html => { if (html) blocks.push(html); };
+  const closeListsTo = level => { while (listStack.length > level) { addBlock("</ul>"); listStack.pop(); } };
+  const pushListItem = item => {
+    const level = Math.max(0, item.level || 0);
+    while (listStack.length <= level) { addBlock("<ul>"); listStack.push(true); }
+    closeListsTo(level + 1);
+    addBlock("\t".repeat(level + 1) + item.html);
+  };
+
+  for (const child of Array.from(body.childNodes || []).filter(n => n.nodeType === 1)) {
+    const ln = localName(child);
+    if (ln === "p") {
+      const text = paragraphText(child);
+      if (shouldSkipParagraph(text)) continue;
+      if (!started) { if (shouldStartOutput(text)) started = true; else continue; }
+      const block = convertParagraph(child, nonEmptyIndex, styleMap, relMap);
+      if (!block) continue;
+      nonEmptyIndex++;
+      if (block.type === "li") pushListItem(block);
+      else { closeListsTo(0); addBlock(block.html); }
+    } else if (ln === "tbl" && started) {
+      closeListsTo(0);
+      addBlock(convertTable(child, styleMap, relMap));
+    }
+  }
+  closeListsTo(0);
+  const sep = CONFIG.blankLineBetweenBlocks ? "\n\n" : "\n";
+  return cleanFinalOutput(blocks.join(sep));
+}
+</script>
+</body>
+</html>

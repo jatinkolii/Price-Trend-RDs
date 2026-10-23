@@ -22,21 +22,134 @@
       --warn: #8a5f00;
       --warn-bg: #fff8e6;
       --queue-h: 340px;
+      --curve-left-x: 0px;
+      --curve-left-y: 0px;
+      --curve-right-x: 0px;
+      --curve-right-y: 0px;
+    }
+    html[data-theme="dark"] {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --line: #30363d;
+      --accent: #58a6ff;
+      --accent-light: #1f4788;
+      --ok: #3fb950;
+      --ok-bg: #0d3a1a;
+      --err: #f85149;
+      --err-bg: #3d1f1a;
+      --warn: #d29922;
+      --warn-bg: #3d2c0f;
+    }
+
+    /* Animations */
+    @keyframes slideInLeft {
+      from { transform: translateX(-380px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideInRight {
+      from { transform: translateX(380px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideInUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes shimmer {
+      0% { background-position: 0 0; }
+      100% { background-position: 200% 0; }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    /* Animated curved background accent lines - respond to scroll */
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      top: 0;
+      width: 200px;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      will-change: transform;
+    }
+    body::before {
+      left: -20px;
+      background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 180 800" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><path d="M 50 0 Q 30 80 50 160 T 50 320 T 50 480 T 50 640 T 50 800" stroke="%23dde2ec" stroke-width="3" fill="none" stroke-linecap="round"/></svg>');
+      animation: slideInLeft 0.7s cubic-bezier(0.16,1,0.3,1) both;
+      transform: translate(var(--curve-left-x, 0px), var(--curve-left-y, 0px));
+    }
+    html[data-theme="dark"] body::before {
+      background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 180 800" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><path d="M 50 0 Q 30 80 50 160 T 50 320 T 50 480 T 50 640 T 50 800" stroke="%2330363d" stroke-width="3" fill="none" stroke-linecap="round"/></svg>');
+    }
+    body::after {
+      right: -20px;
+      background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 180 800" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><path d="M 130 0 Q 150 80 130 160 T 130 320 T 130 480 T 130 640 T 130 800" stroke="%23dde2ec" stroke-width="3" fill="none" stroke-linecap="round"/></svg>');
+      animation: slideInRight 0.7s cubic-bezier(0.16,1,0.3,1) both;
+      transform: translate(var(--curve-right-x, 0px), var(--curve-right-y, 0px));
+    }
+    html[data-theme="dark"] body::after {
+      background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 180 800" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><path d="M 130 0 Q 150 80 130 160 T 130 320 T 130 480 T 130 640 T 130 800" stroke="%2330363d" stroke-width="3" fill="none" stroke-linecap="round"/></svg>');
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: var(--bg);
+      background: linear-gradient(90deg, #f5f6fa 0%, var(--bg) 20%, var(--bg) 80%, #f5f6fa 100%);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
       color: var(--text);
       min-height: 100vh;
       padding: 32px 20px;
+      transition: background 0.3s ease, color 0.3s ease;
+      position: relative;
+    }
+    html[data-theme="dark"] body {
+      background: linear-gradient(90deg, #0a0e13 0%, var(--bg) 20%, var(--bg) 80%, #0a0e13 100%);
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      transition: transform 0.2s ease, background 0.2s ease;
+      z-index: 1000;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .theme-toggle:hover {
+      transform: scale(1.08);
+      background: var(--surface2);
+    }
+    .theme-toggle:active {
+      transform: scale(0.96);
     }
     .wrap {
       max-width: 900px;
       margin: 0 auto;
+      position: relative;
+      z-index: 1;
     }
     .header {
       margin-bottom: 28px;
+      animation: fadeInDown 0.5s cubic-bezier(0.16,1,0.3,1) both;
     }
     .header h1 {
       font-size: 24px;
@@ -50,6 +163,13 @@
       color: var(--muted);
       line-height: 1.6;
     }
+    
+    /* Stagger animations for sections */
+    .dropzone { animation: slideInUp 0.5s 0.08s cubic-bezier(0.16,1,0.3,1) both; }
+    .progress-bar-wrap { animation: slideInUp 0.5s 0.16s cubic-bezier(0.16,1,0.3,1) both; }
+    .global-status { animation: slideInUp 0.5s 0.24s cubic-bezier(0.16,1,0.3,1) both; }
+    .queue-panel { animation: slideInUp 0.5s 0.32s cubic-bezier(0.16,1,0.3,1) both; }
+    .output-panel { animation: slideInUp 0.5s 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 
     /* Drop zone */
     .dropzone {
@@ -114,7 +234,14 @@
       font-weight: 600;
       padding: 10px 20px;
       cursor: pointer;
-      transition: background 0.15s, opacity 0.15s;
+      transition: background 0.15s, opacity 0.15s, transform 0.1s ease;
+    }
+    .btn:not(:disabled):hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .btn:not(:disabled):active {
+      transform: translateY(0);
     }
     .btn:disabled { opacity: 0.45; cursor: not-allowed; }
     .btn-primary { background: var(--accent); color: #fff; }
@@ -131,6 +258,19 @@
       border: 1px solid #f0c0c0;
     }
     .btn-danger:not(:disabled):hover { background: #fbd4d4; }
+    .btn-success {
+      background: var(--ok-bg);
+      color: var(--ok);
+      border: 1px solid #a6e3a1;
+    }
+    .btn-success:not(:disabled):hover { background: #c6f6d5; }
+    
+    /* Shimmer effect for converting button */
+    .btn.is-converting {
+      background-image: linear-gradient(90deg, var(--accent) 0%, #2d5aa0 50%, var(--accent) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s linear infinite;
+    }
     .queue-summary {
       font-size: 13px;
       color: var(--muted);
@@ -186,10 +326,44 @@
       gap: 12px;
       padding: 12px 18px;
       border-bottom: 1px solid var(--line);
-      transition: background 0.12s;
+      transition: background 0.12s, opacity 0.2s, transform 0.15s;
+      animation: slideInUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
+      cursor: grab;
     }
+    .file-row:nth-child(1) { animation-delay: 0ms; }
+    .file-row:nth-child(2) { animation-delay: 40ms; }
+    .file-row:nth-child(3) { animation-delay: 80ms; }
+    .file-row:nth-child(4) { animation-delay: 120ms; }
+    .file-row:nth-child(5) { animation-delay: 160ms; }
+    .file-row:nth-child(n+6) { animation-delay: 200ms; }
     .file-row:last-child { border-bottom: none; }
-    .file-row:hover { background: var(--surface2); }
+    .file-row:hover { background: var(--surface2); transform: translateX(4px); }
+    .file-row.dragging { opacity: 0.5; }
+    .file-row.drag-over { background: var(--accent-light); border: 1px dashed var(--accent); }
+    
+    /* Validation badge */
+    .validation-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 7px;
+      border-radius: 6px;
+      margin-left: 8px;
+    }
+    .validation-badge.warning {
+      background: var(--warn-bg);
+      color: var(--warn);
+    }
+    .validation-badge.error {
+      background: var(--err-bg);
+      color: var(--err);
+    }
+    .validation-badge.ok {
+      background: var(--ok-bg);
+      color: var(--ok);
+    }
     .file-icon {
       width: 36px;
       height: 36px;
@@ -366,9 +540,30 @@
     .global-status.ok { color: var(--ok); display: block; }
     .global-status.err { color: var(--err); display: block; }
     .global-status.running { color: var(--accent); display: block; }
+
+    /* Mobile & Accessibility */
+    @media (max-width: 768px) {
+      body::before,
+      body::after {
+        display: none;
+      }
+      .theme-toggle {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
   </style>
 </head>
 <body>
+<button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">🌙</button>
 <div class="wrap">
 
   <div class="header">
@@ -389,6 +584,7 @@
   <div class="action-bar">
     <button class="btn btn-primary" id="convertAllBtn" disabled>Convert All</button>
     <button class="btn btn-ghost" id="downloadAllBtn" disabled>Download All</button>
+    <button class="btn btn-success" id="copyAllHtmlBtn" disabled title="Copy all converted HTML as a single combined file">Copy All as HTML</button>
     <button class="btn btn-danger" id="clearAllBtn" disabled>Clear Queue</button>
     <span class="queue-summary" id="queueSummary"></span>
   </div>
@@ -433,7 +629,7 @@ const CONFIG = {
   startFromHeadingTexts: ["Key Takeaways", "Market Overview"],
   removeSourceLines: true,
   forceAllListsToUl: true,
-  blankLineBetweenBlocks: true,
+  blankLineBetweenBlocks: false,
   convertBlockquotes: true,
   headingLevelMap: {
     "Heading1": "h3", "heading1": "h3",
@@ -451,10 +647,12 @@ let isConverting = false;
 let idCounter = 0;
 
 /* ── DOM refs ── */
+const themeToggle    = document.getElementById("themeToggle");
 const dropzone       = document.getElementById("dropzone");
 const fileInput      = document.getElementById("fileInput");
 const convertAllBtn  = document.getElementById("convertAllBtn");
 const downloadAllBtn = document.getElementById("downloadAllBtn");
+const copyAllHtmlBtn = document.getElementById("copyAllHtmlBtn");
 const clearAllBtn    = document.getElementById("clearAllBtn");
 const queueList      = document.getElementById("queueList");
 const queueSummary   = document.getElementById("queueSummary");
@@ -464,7 +662,45 @@ const progressWrap   = document.getElementById("progressWrap");
 const progressFill   = document.getElementById("progressFill");
 const globalStatus   = document.getElementById("globalStatus");
 
-/* ── Drag & Drop ── */
+/* ── Theme Management ── */
+const THEME_KEY = "docxConverterTheme";
+function initTheme() {
+  let theme = localStorage.getItem(THEME_KEY) || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  applyTheme(theme);
+}
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  themeToggle.textContent = theme === "dark" ? "☀️" : "🌙";
+  localStorage.setItem(THEME_KEY, theme);
+}
+themeToggle.addEventListener("click", () => {
+  const current = document.documentElement.getAttribute("data-theme");
+  applyTheme(current === "dark" ? "light" : "dark");
+});
+initTheme();
+
+/* ── Scroll Parallax for Curves ── */
+let scrollY = 0;
+
+function updateCurvePosition() {
+  // Zigzag effect with stronger offset for visibility
+  const offsetX = Math.sin(scrollY * 0.005) * 25;
+  const offsetY = Math.cos(scrollY * 0.003) * 15;
+  
+  const root = document.documentElement;
+  root.style.setProperty('--curve-left-x', offsetX + 'px');
+  root.style.setProperty('--curve-left-y', offsetY + 'px');
+  root.style.setProperty('--curve-right-x', (-offsetX) + 'px');
+  root.style.setProperty('--curve-right-y', (-offsetY) + 'px');
+}
+
+window.addEventListener("scroll", () => {
+  scrollY = window.scrollY;
+  requestAnimationFrame(updateCurvePosition);
+}, { passive: true });
+
+// Call once on load
+updateCurvePosition();
 ["dragenter","dragover"].forEach(evt => {
   dropzone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dropzone.classList.add("dragover"); });
   document.body.addEventListener(evt, e => e.preventDefault());
@@ -512,8 +748,8 @@ function renderQueue() {
     queueList.innerHTML = `<div class="queue-empty"><span class="queue-empty-icon">🗂️</span><span>No files added yet</span></div>`;
     return;
   }
-  queueList.innerHTML = queue.map(item => `
-    <div class="file-row" id="row-${item.id}">
+  queueList.innerHTML = queue.map((item, idx) => `
+    <div class="file-row" id="row-${item.id}" draggable="true" data-index="${idx}">
       <div class="file-icon">📄</div>
       <div class="file-info">
         <div class="file-name" title="${esc(item.file.name)}">${esc(item.file.name)}</div>
@@ -521,6 +757,7 @@ function renderQueue() {
       </div>
       <div>
         ${statusBadge(item)}
+        ${item.html ? getValidationBadge(item) : ""}
       </div>
       <div class="row-actions">
         ${item.html ? `<button class="icon-btn" title="View output" onclick="viewFile(${item.id})">👁️</button>` : ""}
@@ -529,6 +766,29 @@ function renderQueue() {
       </div>
     </div>
   `).join("");
+  attachDragListeners();
+}
+
+function getValidationBadge(item) {
+  const validation = validateHtml(item.html);
+  if (validation.level === "ok") {
+    return `<span class="validation-badge ok" title="Valid">✓</span>`;
+  } else if (validation.level === "warning") {
+    return `<span class="validation-badge warning" title="${esc(validation.message)}">⚠</span>`;
+  } else {
+    return `<span class="validation-badge error" title="${esc(validation.message)}">✕</span>`;
+  }
+}
+
+function validateHtml(html) {
+  // Check for common issues
+  if (!html || html.length < 10) return { level: "error", message: "Empty output" };
+  if (/<h[1-6]>.*?<\/h[1-6]>/i.test(html) && /<p>.*?<\/p>/i.test(html)) {
+    return { level: "ok", message: "Valid structure" };
+  } else if (/<[^>]+>/.test(html)) {
+    return { level: "warning", message: "Minimal markup" };
+  }
+  return { level: "warning", message: "Check structure" };
 }
 
 function statusBadge(item) {
@@ -592,6 +852,7 @@ function updateActionBar() {
   const idle  = queue.filter(q => q.status === "idle").length;
   convertAllBtn.disabled  = !idle || isConverting;
   downloadAllBtn.disabled = !done || isConverting;
+  copyAllHtmlBtn.disabled = !done || isConverting;
   clearAllBtn.disabled    = !total || isConverting;
   queueSummary.textContent = total ? `${done} / ${total} converted` : "";
 }
@@ -604,6 +865,7 @@ async function convertAll() {
 
   isConverting = true;
   updateActionBar();
+  convertAllBtn.classList.add("is-converting");
   progressWrap.classList.add("visible");
   showGlobalStatus("Converting…", "running");
 
@@ -628,6 +890,7 @@ async function convertAll() {
   }
 
   isConverting = false;
+  convertAllBtn.classList.remove("is-converting");
   updateActionBar();
 
   const errors = queue.filter(q => q.status === "error").length;
@@ -657,6 +920,8 @@ downloadAllBtn.addEventListener("click", () => {
   queue.filter(q => q.html).forEach(q => triggerDownload(q));
 });
 
+copyAllHtmlBtn.addEventListener("click", copyAllHtml);
+
 function downloadFile(id) {
   const item = queue.find(q => q.id === id);
   if (item?.html) triggerDownload(item);
@@ -684,6 +949,57 @@ async function copyActive() {
   } catch {
     showGlobalStatus("Copy failed — select all and copy manually.", "err");
   }
+}
+
+async function copyAllHtml() {
+  const done = queue.filter(q => q.status === "done" && q.html);
+  if (!done.length) {
+    showGlobalStatus("No converted files to copy.", "err");
+    return;
+  }
+  try {
+    const combined = done.map((item, idx) => {
+      const name = item.file.name.replace(/\.docx$/i, "");
+      return `<!-- ===== ${name} ===== -->\n${item.html}`;
+    }).join("\n\n");
+    await navigator.clipboard.writeText(combined);
+    showGlobalStatus(`Copied ${done.length} file(s) as combined HTML.`, "ok");
+    setTimeout(() => showGlobalStatus("", ""), 3000);
+  } catch (e) {
+    showGlobalStatus("Copy failed — try downloading instead.", "err");
+  }
+}
+
+/* ── Drag & Drop Reordering ── */
+let draggedIndex = null;
+function attachDragListeners() {
+  document.querySelectorAll(".file-row").forEach(row => {
+    row.addEventListener("dragstart", e => {
+      draggedIndex = parseInt(row.dataset.index);
+      row.classList.add("dragging");
+    });
+    row.addEventListener("dragend", () => {
+      row.classList.remove("dragging");
+      document.querySelectorAll(".file-row").forEach(r => r.classList.remove("drag-over"));
+    });
+    row.addEventListener("dragover", e => {
+      e.preventDefault();
+      row.classList.add("drag-over");
+    });
+    row.addEventListener("dragleave", () => {
+      row.classList.remove("drag-over");
+    });
+    row.addEventListener("drop", e => {
+      e.preventDefault();
+      const dropIndex = parseInt(row.dataset.index);
+      if (draggedIndex !== null && draggedIndex !== dropIndex) {
+        const [dragged] = queue.splice(draggedIndex, 1);
+        queue.splice(dropIndex, 0, dragged);
+        renderQueue();
+      }
+      row.classList.remove("drag-over");
+    });
+  });
 }
 
 /* ── Helpers ── */
@@ -722,9 +1038,11 @@ function wAttr(node, name, ns) {
   return node.getAttributeNS(ns, name) || node.getAttribute("w:" + name) || node.getAttribute("r:" + name) || node.getAttribute(name);
 }
 function escHtml(text) {
+  // Only escape what HTML actually requires in text content. Apostrophes and
+  // unicode arrows (↑ ↓) are left as literal characters to match the target
+  // CMS format, rather than being turned into &#39; / &uarr; / &darr;.
   return String(text ?? "")
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/'/g, "&#39;")
-    .replace(/\u2191/g, "&uarr;").replace(/\u2193/g, "&darr;");
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 function normalizeText(text) {
   return String(text || "").replace(/\u00A0/g, " ").replace(/[ \t\r\n]+/g, " ").trim();
@@ -774,7 +1092,7 @@ function buildStyleMap(stylesXml) {
       basedOn: basedOn ? wAttr(basedOn, "val") : null,
       type: wAttr(style, "type") || "",
       hasNumPr: !!(pPr && firstChildByName(pPr, "numPr")),
-      bold: !!(rPr && firstChildByName(rPr, "b")),
+      bold: getBoldFromRPr(rPr),
       size: getSizeFromRPr(rPr)
     };
   }
@@ -803,6 +1121,16 @@ function getRunStyleId(r) {
   const rPr = firstChildByName(r, "rPr");
   const rStyle = rPr ? firstChildByName(rPr, "rStyle") : null;
   return rStyle ? wAttr(rStyle, "val") : null;
+}
+function getBoldFromRPr(rPr) {
+  // A <w:b> element only means bold if its val isn't explicitly "0"/"false"
+  // (Word uses <w:b w:val="0"/> to turn bold OFF for a style, e.g.
+  // ListParagraph). Returns null when there's no <w:b> at all, so callers can
+  // still fall back to a based-on style instead of treating "no info" as bold.
+  const b = rPr ? firstChildByName(rPr, "b") : null;
+  if (!b) return null;
+  const v = wAttr(b, "val");
+  return !(v === "0" || v === "false");
 }
 function getSizeFromRPr(rPr) {
   const sz = rPr ? firstChildByName(rPr, "sz") : null;
@@ -856,13 +1184,44 @@ function paragraphListLevel(p) {
   return Number.isFinite(n) ? n : 0;
 }
 
+// Sub-header lines that must stay bold paragraphs (not real headings) even
+// though their Word style (or size) looks heading-like — e.g. the "Why did
+// the price of X change...?" question lines, and the "Expert Market
+// Research: ..." tagline under "How We Can Help".
+function isForcedBoldParagraph(text) {
+  return /^Why did the price of /i.test(text) || /^Expert Market Research:/i.test(text);
+}
+
+// Quarterly price-list headers, e.g. "Bronze Prices Q2 2026:" or
+// "Acrylic Staple Fiber Prices Q1 2026:" — always rendered as h4, with the
+// following "Region: value" lines grouped into a single <ul>.
+function isQuarterPriceListHeader(text) {
+  return /Prices?\s+Q\d\s+20\d\d:\s*$/i.test(text.trim());
+}
+
+// Short standalone regional-price headers with no year, e.g.
+// "Bronze Prices in China" or "Benzoyl Chloride Prices in United States" —
+// distinct from ordinary sentences that merely contain the words
+// "price(s) in" somewhere in a longer clause. Requires: no sentence
+// punctuation anywhere in the line, and a short overall length, since a
+// real heading is a short label, not a full sentence.
+function isRegionalPricesHeader(text) {
+  const t = text.trim();
+  if (t.length > 70) return false;
+  if (/[.!?,;]/.test(t)) return false;
+  return /^[A-Za-z][\w()/&\-]*(?:\s+[\w()/&\-]+){0,5}\s+Prices?\s+in\s+[A-Za-z][A-Za-z\s]{1,40}$/.test(t);
+}
+
 function getHeadingTag(p, nonEmptyIndex, styleMap) {
   const text = paragraphText(p);
   if (!text) return null;
+  if (isForcedBoldParagraph(text)) return "bold-p";
+  if (isQuarterPriceListHeader(text)) return "h4";
+  if (isRegionalPricesHeader(text)) return CONFIG.legacyHeadingTag;
   const styleId = getParagraphStyleId(p);
   const styleName = styleId ? String(resolveStyle(styleId, styleMap, "name") || styleId) : "";
   if (styleId && CONFIG.headingLevelMap[styleId]) return CONFIG.headingLevelMap[styleId];
-  if (/^heading\s*1$/i.test(styleName)) return "h2";
+  if (/^heading\s*1$/i.test(styleName)) return "h3";
   if (/^heading\s*2$/i.test(styleName)) return "h3";
   if (/^heading\s*3$/i.test(styleName)) return "bold-p";
   if (/^heading\s*4$/i.test(styleName)) return "h4";
@@ -904,9 +1263,12 @@ function stripLeadingListMarker(html) {
   return html.replace(/^\s*(?:\d+\.|[a-zA-Z]\.|[ivxlcdm]+\.|[·•\-])\s*/i, "").trim();
 }
 function applyLeadingStrongPattern(html) {
+  // "Label:" gets bolded with the closing </strong> right after the colon,
+  // then a plain space before the value — e.g. <strong>China:</strong> USD…
+  // (not a &nbsp; baked inside the bold tag).
   if (/^<strong>[^<]+:<\/strong>/i.test(html))
-    return html.replace(/^<strong>([^<]+:)<\/strong>\s*/i, "<strong>$1&nbsp;</strong>");
-  return html.replace(/^([^:<]{2,90}:)\s+/i, "<strong>$1&nbsp;</strong>");
+    return html.replace(/^<strong>([^<]+:)<\/strong>\s*/i, "<strong>$1</strong> ");
+  return html.replace(/^([^:<]{2,90}:)\s+/i, "<strong>$1</strong> ");
 }
 
 function buildInlineHtmlFromParagraph(p, styleMap, relMap, options) {
@@ -974,10 +1336,11 @@ function convertParagraph(p, nonEmptyIndex, styleMap, relMap) {
   if (!inline) return null;
   if (isBlockquoteParagraph(p, styleMap))
     return { type: "blockquote", html: `<blockquote>\n\t<p>${inline}</p>\n</blockquote>`, text };
-  inline = inline.replace(/^(<strong>[^<]*<\/strong>|[^:<]{1,60}?)(\s*:)(\s*)(?=\S)/, (_, label, colon, space) => {
-    const stripped = label.replace(/<\/?strong>/gi, "");
-    return `<strong>${stripped}${colon}<\/strong>${space}`;
-  });
+  // Note: plain paragraphs are rendered as-authored. Bold only appears where
+  // the source docx actually marks a run bold — we don't synthesize bold on
+  // a leading "Label:" here, since ordinary narrative sentences in these
+  // reports often start with a "Region ... in Q2 2026:" clause that should
+  // stay plain text, not become a bolded label.
   return { type: "p", html: `<p>${inline}</p>`, text };
 }
 
@@ -1033,7 +1396,9 @@ function convertTable(tbl, styleMap, relMap) {
 
 function shouldStartOutput(text) {
   const n = normalizeText(text).toLowerCase();
-  return CONFIG.startFromHeadingTexts.some(h => n === h.toLowerCase());
+  if (CONFIG.startFromHeadingTexts.some(h => n === h.toLowerCase())) return true;
+  // Also start at product-specific headings such as "Sodium Chlorate Market Overview"
+  return /^.{1,80}\s+market overview$/i.test(n);
 }
 function cleanFinalOutput(html) {
   return html
@@ -1041,9 +1406,9 @@ function cleanFinalOutput(html) {
     .replace(/\s+<\/li>/g, "</li>")
     .replace(/\s+<\/p>/g, "</p>")
     .replace(/<strong>\s*<\/strong>/g, "")
-    .replace(/<strong>([^<]+:)\s*<\/strong>\s*/g, "<strong>$1&nbsp;</strong>")
+    .replace(/<strong>([^<]+:)\s*<\/strong>\s*/g, "<strong>$1</strong> ")
     .replace(/\n{3,}/g, "\n\n")
-    .trim();
+    .trim() + "\n";
 }
 
 async function convertDocx(file) {
@@ -1058,17 +1423,27 @@ async function convertDocx(file) {
   const body = firstChildByName(doc.documentElement, "body");
   if (!body) throw new Error("Could not find the document body.");
 
-  const blocks = [], listStack = [];
-  let nonEmptyIndex = 0, started = false;
+  const blocks = [];
+  // List items accumulate here (one flat <ul>, which is all this report
+  // template ever needs — quarterly price bullets and FAQ items) and get
+  // flushed as a single block, so there are no blank lines between <li>s.
+  let listBuffer = null;
+  let nonEmptyIndex = 0, started = false, collectingPriceList = false;
 
   const addBlock = html => { if (html) blocks.push(html); };
-  const closeListsTo = level => { while (listStack.length > level) { addBlock("</ul>"); listStack.pop(); } };
-  const pushListItem = item => {
-    const level = Math.max(0, item.level || 0);
-    while (listStack.length <= level) { addBlock("<ul>"); listStack.push(true); }
-    closeListsTo(level + 1);
-    addBlock("\t".repeat(level + 1) + item.html);
+  const closeListsTo = () => {
+    if (listBuffer && listBuffer.length) {
+      addBlock("<ul>\n\t" + listBuffer.join("\n\t") + "\n</ul>");
+    }
+    listBuffer = null;
   };
+  const pushListItem = item => {
+    if (listBuffer === null) listBuffer = [];
+    listBuffer.push(item.html);
+  };
+  // "Region: value" lines directly under a "X Prices Q# YYYY:" header, e.g.
+  // "United States: USD 2.33/KG" — grouped into one <ul> instead of <p>s.
+  const isPriceListLine = text => /^[^:]{1,60}:\s*\S/.test(text) && !isForcedBoldParagraph(text);
 
   for (const child of Array.from(body.childNodes || []).filter(n => n.nodeType === 1)) {
     const ln = localName(child);
@@ -1076,17 +1451,35 @@ async function convertDocx(file) {
       const text = paragraphText(child);
       if (shouldSkipParagraph(text)) continue;
       if (!started) { if (shouldStartOutput(text)) started = true; else continue; }
+
+      if (collectingPriceList) {
+        if (!isHeadingParagraph(child, nonEmptyIndex, styleMap) && isPriceListLine(text)) {
+          const inline = buildInlineHtmlFromParagraph(child, styleMap, relMap, { strongLeadingLabel: true });
+          if (inline) {
+            pushListItem({ level: 0, html: `<li>${inline}</li>` });
+            nonEmptyIndex++;
+            continue;
+          }
+        }
+        collectingPriceList = false;
+      }
+
       const block = convertParagraph(child, nonEmptyIndex, styleMap, relMap);
       if (!block) continue;
       nonEmptyIndex++;
       if (block.type === "li") pushListItem(block);
-      else { closeListsTo(0); addBlock(block.html); }
+      else {
+        closeListsTo();
+        addBlock(block.html);
+        if (block.type === "heading" && isQuarterPriceListHeader(block.text)) collectingPriceList = true;
+      }
     } else if (ln === "tbl" && started) {
-      closeListsTo(0);
+      collectingPriceList = false;
+      closeListsTo();
       addBlock(convertTable(child, styleMap, relMap));
     }
   }
-  closeListsTo(0);
+  closeListsTo();
   const sep = CONFIG.blankLineBetweenBlocks ? "\n\n" : "\n";
   return cleanFinalOutput(blocks.join(sep));
 }

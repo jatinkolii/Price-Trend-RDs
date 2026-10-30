@@ -69,7 +69,7 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
     }
-    
+
     /* Animated curved background accent lines - respond to scroll */
     body::before,
     body::after {
@@ -163,7 +163,7 @@
       color: var(--muted);
       line-height: 1.6;
     }
-    
+
     /* Stagger animations for sections */
     .dropzone { animation: slideInUp 0.5s 0.08s cubic-bezier(0.16,1,0.3,1) both; }
     .progress-bar-wrap { animation: slideInUp 0.5s 0.16s cubic-bezier(0.16,1,0.3,1) both; }
@@ -264,7 +264,7 @@
       border: 1px solid #a6e3a1;
     }
     .btn-success:not(:disabled):hover { background: #c6f6d5; }
-    
+
     /* Shimmer effect for converting button */
     .btn.is-converting {
       background-image: linear-gradient(90deg, var(--accent) 0%, #2d5aa0 50%, var(--accent) 100%);
@@ -340,7 +340,7 @@
     .file-row:hover { background: var(--surface2); transform: translateX(4px); }
     .file-row.dragging { opacity: 0.5; }
     .file-row.drag-over { background: var(--accent-light); border: 1px dashed var(--accent); }
-    
+
     /* Validation badge */
     .validation-badge {
       display: inline-flex;
@@ -684,9 +684,9 @@ let scrollY = 0;
 
 function updateCurvePosition() {
   // Zigzag effect with stronger offset for visibility
-  const offsetX = Math.sin(scrollY * 0.005) * 25;
-  const offsetY = Math.cos(scrollY * 0.003) * 15;
-  
+  const offsetX = Math.sin(scrollY * 0.005) * 30;
+  const offsetY = Math.cos(scrollY * 0.003) * 20;
+
   const root = document.documentElement;
   root.style.setProperty('--curve-left-x', offsetX + 'px');
   root.style.setProperty('--curve-left-y', offsetY + 'px');
@@ -701,6 +701,7 @@ window.addEventListener("scroll", () => {
 
 // Call once on load
 updateCurvePosition();
+
 ["dragenter","dragover"].forEach(evt => {
   dropzone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dropzone.classList.add("dragover"); });
   document.body.addEventListener(evt, e => e.preventDefault());
